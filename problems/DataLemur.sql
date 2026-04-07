@@ -218,3 +218,119 @@ SELECT user_id, (Datediff(max(post_date), min(post_date))) as days_between from 
 where year(post_date) = 2021
 group by user_id
 HAVING count(user_id)>1
+
+--Q7 User's Third Transaction
+
+-- Assume you are given the table below on Uber transactions made by users. Write a query to obtain the third transaction of every user. Output the user id, spend and transaction date.
+
+-- transactions Table:
+-- Column Name	Type
+-- user_id	integer
+-- spend	decimal
+-- transaction_date	timestamp
+-- transactions Example Input:
+-- user_id	spend	transaction_date
+-- 111	100.50	01/08/2022 12:00:00
+-- 111	55.00	01/10/2022 12:00:00
+-- 121	36.00	01/18/2022 12:00:00
+-- 145	24.99	01/26/2022 12:00:00
+-- 111	89.60	02/05/2022 12:00:00
+-- Example Output:
+-- user_id	spend	transaction_date
+-- 111	89.60	02/05/2022 12:00:00
+
+-- Solution:
+
+with cte as (SELECT user_id, spend, transaction_date, 
+row_number()over(PARTITION by user_id order by transaction_date) as rnk FROM transactions)
+
+SELECT user_id, spend, transaction_date from cte
+where rnk =3;
+
+-- Second Highest Salary
+
+-- Imagine you're an HR analyst at a tech company tasked with analyzing employee salaries. Your manager is keen on understanding the pay distribution and asks you to determine the second highest salary among all employees.
+
+-- It's possible that multiple employees may share the same second highest salary. In case of duplicate, display the salary only once.
+
+-- employee Schema:
+-- column_name	type	description
+-- employee_id	integer	The unique ID of the employee.
+-- name	string	The name of the employee.
+-- salary	integer	The salary of the employee.
+-- department_id	integer	The department ID of the employee.
+-- manager_id	integer	The manager ID of the employee.
+-- employee Example Input:
+-- employee_id	name	salary	department_id	manager_id
+-- 1	Emma Thompson	3800	1	6
+-- 2	Daniel Rodriguez	2230	1	7
+-- 3	Olivia Smith	2000	1	8
+-- Example Output:
+-- second_highest_salary
+-- 2230
+-- The output represents the second highest salary among all employees. In this case, the second highest salary is $2,230.
+
+--Solution:
+
+SELECT a.salary as second_highest_salary from (SELECT  department_id, salary, rank() over(order by salary DESC) as rnk
+FROM employee
+order by salary DESC) a
+where rnk = 2;
+
+-- Q8 Sending vs. Opening Snaps
+-- Assume you're given tables with information on Snapchat users, including their ages and time spent sending and opening snaps.
+
+-- Write a query to obtain a breakdown of the time spent sending vs. opening snaps as a percentage of total time spent on these activities grouped by age group. Round the percentage to 2 decimal places in the output.
+
+-- Notes:
+
+-- Calculate the following percentages:
+-- time spent sending / (Time spent sending + Time spent opening)
+-- Time spent opening / (Time spent sending + Time spent opening)
+-- To avoid integer division in percentages, multiply by 100.0 and not 100.
+-- Effective April 15th, 2023, the solution has been updated and optimised.
+
+-- activities Table
+-- Column Name	Type
+-- activity_id	integer
+-- user_id	integer
+-- activity_type	string ('send', 'open', 'chat')
+-- time_spent	float
+-- activity_date	datetime
+-- activities Example Input
+-- activity_id	user_id	activity_type	time_spent	activity_date
+-- 7274	123	open	4.50	06/22/2022 12:00:00
+-- 2425	123	send	3.50	06/22/2022 12:00:00
+-- 1413	456	send	5.67	06/23/2022 12:00:00
+-- 1414	789	chat	11.00	06/25/2022 12:00:00
+-- 2536	456	open	3.00	06/25/2022 12:00:00
+-- age_breakdown Table
+-- Column Name	Type
+-- user_id	integer
+-- age_bucket	string ('21-25', '26-30', '31-25')
+-- age_breakdown Example Input
+-- user_id	age_bucket
+-- 123	31-35
+-- 456	26-30
+-- 789	21-25
+-- Example Output
+-- age_bucket	send_perc	open_perc
+-- 26-30	65.40	34.60
+-- 31-35	43.75	56.25
+-- Explanation
+-- Using the age bucket 26-30 as example, the time spent sending snaps was 5.67 and the time spent opening snaps was 3.
+
+-- To calculate the percentage of time spent sending snaps, we divide the time spent sending snaps by the total time spent on sending and opening snaps, which is 5.67 + 3 = 8.67.
+
+-- So, the percentage of time spent sending snaps is 5.67 / (5.67 + 3) = 65.4%, and the percentage of time spent opening snaps is 3 / (5.67 + 3) = 34.6%.
+
+--Solution:
+
+SELECT b.age_bucket,
+round(sum(CASE WHEN a.activity_type = "send" THEN a.time_spent else 0 end)*100.0 /sum(time_spent),2)as send_perc,
+round(sum(CASE WHEN a.activity_type = "open" THEN a.time_spent else 0 end)*100.0/sum(time_spent),2) as open_perc
+FROM activities a
+inner join age_breakdown b on
+a.user_id=b.user_id
+where a.activity_type in ("open","send")
+group by b.age_bucket;
